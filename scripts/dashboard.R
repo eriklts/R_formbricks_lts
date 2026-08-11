@@ -235,13 +235,13 @@ server <- function(
       return()
     }
 
-    survey_choices <- setNames(
-      as.character(surveys$survey_id),
-      surveys$survey_name
+    survey_choices <- c(
+      "Todas as pesquisas" = "__TODAS__",
+      setNames(as.character(surveys$survey_id), surveys$survey_name)
     )
 
     selecionado <- isolate(input$filtro_survey)
-    if (is.null(selecionado) || !selecionado %in% as.character(surveys$survey_id)) {
+    if (is.null(selecionado) || !(selecionado %in% c("__TODAS__", as.character(surveys$survey_id)))) {
       selecionado <- as.character(surveys$survey_id[1])
     }
 
@@ -260,6 +260,10 @@ server <- function(
       return("Pesquisa selecionada: nenhuma")
     }
 
+    if (identical(selecionado, "__TODAS__")) {
+      return("Pesquisa selecionada: Todas as pesquisas")
+    }
+
     survey <- surveys |> filter(as.character(survey_id) == selecionado)
     if (nrow(survey) == 0) {
       return(paste0("Pesquisa selecionada: ", selecionado))
@@ -267,8 +271,7 @@ server <- function(
 
     paste0(
       "Pesquisa selecionada: ",
-      survey$survey_name[1],
-      " (", survey$survey_id[1], ")"
+      survey$survey_name[1]
     )
   })
 
@@ -277,7 +280,7 @@ server <- function(
     if (nrow(df) == 0) return(df)
 
     survey_selecionada <- as.character(input$filtro_survey)
-    if (!is.null(survey_selecionada) && nzchar(survey_selecionada)) {
+    if (!is.null(survey_selecionada) && nzchar(survey_selecionada) && survey_selecionada != "__TODAS__") {
       df <- df |> filter(as.character(.data$survey_id) == survey_selecionada)
     }
 
