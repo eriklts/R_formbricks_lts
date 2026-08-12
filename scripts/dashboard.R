@@ -219,13 +219,47 @@ server <- function(
 
   dados_tratados <- reactive({ cache_dados() })
 
+  limpar_setor <- function(setor) {
+    # Converte para string
+    s <- as.character(setor)
+    # Remove underscores
+    s <- gsub("_", " ", s)
+    # Remove caracteres especiais, mantendo apenas letras, números e espaços
+    s <- gsub("[^\\p{L}0-9 ]+", "", s, perl = TRUE)
+    # Remove espaços múltiplos
+    s <- trimws(gsub("\\s+", " ", s))
+    # Primeira letra maiúscula
+    s <- tools::toTitleCase(tolower(s))
+    # Se ficou vazio, retorna "Sem setor"
+    if (nchar(s) == 0) return("Sem setor")
+    s
+  }
+
   observeEvent(dados_tratados(), {
     df <- dados_tratados()
-    setores <- if (nrow(df) == 0) character(0) else sort(unique(df$setor))
+    raw_setores <- if (nrow(df) == 0) character(0) else sort(unique(as.character(df$setor)))
     atual <- isolate(input$filtro_setor)
-    selecionado <- intersect(atual, setores)
+    selecionado <- intersect(atual, raw_setores)
 
-    updateSelectizeInput(session, "filtro_setor", choices = setores, selected = selecionado, server = FALSE)
+    # Cria labels limpos
+    display <- sapply(raw_setores, limpar_setor, USE.NAMES = FALSE)
+
+    # Desambigua duplicatas adicionando índice
+    if (any(duplicated(display))) {
+      groups <- split(seq_along(display), display)
+      for (g in groups) {
+        if (length(g) > 1) {
+          for (k in seq_along(g)) {
+            display[g[k]] <- paste0(display[g[k]], " (", k, ")")
+          }
+        }
+      }
+    }
+
+    # Cria choices com mapping display => valor original
+    choices <- setNames(as.character(raw_setores), display)
+
+    updateSelectizeInput(session, "filtro_setor", choices = choices, selected = selecionado, server = FALSE)
   })
 
   observeEvent(cache_survey_nomes(), {
@@ -431,10 +465,10 @@ respostas_estruturadas <- reactive({
   })
 
   output$grafico_setor <- renderPlotly({
-    df <- respostas_quantitativas()
+    df <- dados_filtrados()
     if (nrow(df) == 0) return(NULL)
-    dados_setor <- df |> count(setor, name = "quantidade") |> arrange(desc(quantidade))
-    plot_ly(data = dados_setor, x = ~setor, y = ~quantidade, type = "bar")
+    dados_setor <- df |> distinct(id, setor) |> count(setor, name = "quantidade") |> arrange(desc(quantidade))
+    plot_ly(data = dados_setor, x = ~setor, y = ~quantidade, type = "bar") |> layout(xaxis = list(title = "Setor"), yaxis = list(title = "Quantidade de links respondidos"))
   })
 
   output$grafico_respostas <- renderPlotly({
@@ -456,10 +490,10 @@ respostas_estruturadas <- reactive({
   })
 
   output$grafico_tempo <- renderPlotly({
-    df <- respostas_quantitativas()
+    df <- dados_filtrados()
     if (nrow(df) == 0) return(NULL)
-    dados_tempo <- df |> mutate(data = as.Date(created_at)) |> count(data, name = "quantidade")
-    plot_ly(data = dados_tempo, x = ~data, y = ~quantidade, type = "scatter", mode = "lines+markers")
+    dados_tempo <- df |> mutate(data = as.Date(created_at)) |> distinct(id, data) |> count(data, name = "quantidade") |> arrange(data)
+    plot_ly(data = dados_tempo, x = ~data, y = ~quantidade, type = "scatter", mode = "lines+markers") |> layout(xaxis = list(title = "Data"), yaxis = list(title = "Quantidade de links respondidos"))
   })
 
   output$grafico_media <- renderPlotly({

@@ -87,7 +87,7 @@ montar_mapa_blocos_json <- function(blocks_json, survey_id) {
     primeiras_linhas <- limpar_headline_formbricks(primeiro_headline)
     bloco_nome <- bloco_nome_original
 
-    if (length(primeiras_linhas) < 2) next
+    if (length(primeiras_linhas) == 0) next
 
     bloco_nome <- trimws(primeiras_linhas[1])
     if (is.na(bloco_nome) || bloco_nome == "" || grepl("^(Block|Bloco)\\s*[0-9]+$", bloco_nome, ignore.case = TRUE)) next
