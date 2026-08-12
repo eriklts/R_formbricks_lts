@@ -95,13 +95,17 @@ server <- function(input, output, session) {
   # ===== REATIVAS PRINCIPAIS =====
   dados_tratados <- reactive({ cache_dados() })
   
-  dados_filtrados <- reactive({
+  # Dados filtrados apenas por survey (sem filtro de setor)
+  dados_por_survey <- reactive({
     df <- dados_tratados()
     if (nrow(df) == 0) return(df)
-    
-    df <- filtrar_por_survey(df, input$filtro_survey)
-    df <- filtrar_por_setores(df, input$filtro_setor)
-    df
+    filtrar_por_survey(df, input$filtro_survey)
+  })
+  
+  dados_filtrados <- reactive({
+    df <- dados_por_survey()
+    if (nrow(df) == 0) return(df)
+    filtrar_por_setores(df, input$filtro_setor)
   })
   
   respostas_estruturadas <- reactive({
@@ -119,8 +123,8 @@ server <- function(input, output, session) {
   })
   
   # ===== ATUALIZAÇÃO DE FILTROS =====
-  observeEvent(dados_tratados(), {
-    raw_setores <- if (nrow(dados_tratados()) == 0) character(0) else sort(unique(as.character(dados_tratados()$setor)))
+  observeEvent(dados_por_survey(), {
+    raw_setores <- if (nrow(dados_por_survey()) == 0) character(0) else sort(unique(as.character(dados_por_survey()$setor)))
     selecionado <- isolate(input$filtro_setor)
     atualizar_filtro_setor(session, raw_setores, selecionado)
   })
@@ -129,6 +133,11 @@ server <- function(input, output, session) {
     surveys <- cache_survey_nomes()
     selecionado <- isolate(input$filtro_survey)
     atualizar_filtro_survey(session, surveys, selecionado)
+  })
+  
+  # Resetar setores quando survey muda
+  observeEvent(input$filtro_survey, {
+    updateSelectizeInput(session, "filtro_setor", selected = character(0))
   })
   
   observeEvent(respostas_estruturadas(), {
