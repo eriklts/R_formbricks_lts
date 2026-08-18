@@ -16,17 +16,27 @@ renderizar_grafico_setor <- function(df) {
 
 renderizar_grafico_respostas <- function(df) {
   if (nrow(df) == 0) return(NULL)
-  dados <- df |> 
-    count(resposta, name = "quantidade") |> 
-    arrange(desc(quantidade))
-  
+
+  ordem_niveis <- names(valor_resposta) 
+
+  dados <- df |>
+    mutate(resposta_norm = coalesce(unname(normalizar_resposta[resposta]), resposta)) |>
+    count(resposta_norm, name = "quantidade") |>
+    mutate(resposta_norm = factor(resposta_norm, levels = ordem_niveis)) |>
+    arrange(resposta_norm)
+
   plot_ly(
     data = dados,
-    x = ~resposta,
+    x = ~resposta_norm,
     y = ~quantidade,
-    type = "bar"
+    type = "bar",
+    marker = list(color = unname(cores_resposta[as.character(dados$resposta_norm)]))
   ) |> layout(
-    xaxis = list(title = "Resposta"),
+    xaxis = list(
+      title = "Resposta",
+      categoryorder = "array",
+      categoryarray = ordem_niveis
+    ),
     yaxis = list(title = "Quantidade")
   )
 }
@@ -42,7 +52,20 @@ renderizar_grafico_tempo <- function(df) {
   plot_ly(data = dados, x = ~data, y = ~quantidade, type = "scatter", mode = "lines+markers") |>
     layout(
       xaxis = list(title = "Data"),
-      yaxis = list(title = "Quantidade de links respondidos")
+      yaxis = list(title = "Quantidade de links respondidos"),
+      annotations = list(
+        list(
+          text = "\u2191",   # seta para cima ↑
+          x = 1,
+          y = 1,
+          xref = "paper",
+          yref = "paper",
+          xanchor = "right",
+          yanchor = "top",
+          showarrow = FALSE,
+          font = list(size = 28, color = "#333333")
+        )
+      )
     )
 }
 
@@ -71,7 +94,6 @@ renderizar_grafico_percentual <- function(df, pergunta_id_local, bloco_local) {
   
   if (nrow(dados) == 0) return(NULL)
   
-  # Cria escala com todas as respostas possíveis
   escala <- data.frame(
     resposta_normalizada = names(valor_resposta),
     ordem = seq_along(valor_resposta),
@@ -87,12 +109,16 @@ renderizar_grafico_percentual <- function(df, pergunta_id_local, bloco_local) {
   total <- sum(dados_pct$quantidade)
   if (total == 0) return(NULL)
   
+  ordem_niveis <- names(valor_resposta) 
+
   dados_pct <- dados_pct |>
     mutate(
       percentual = round(100 * quantidade / total, 1),
-      texto = paste0(resposta_normalizada, "<br>", percentual, "%")
-    )
-  
+      texto = paste0(resposta_normalizada, "<br>", percentual, "%"),
+      resposta_normalizada = factor(resposta_normalizada, levels = ordem_niveis)
+    ) |>
+    arrange(resposta_normalizada)
+
   plot_ly(
     data = dados_pct,
     x = ~resposta_normalizada,
@@ -100,6 +126,7 @@ renderizar_grafico_percentual <- function(df, pergunta_id_local, bloco_local) {
     text = ~texto,
     type = "bar",
     textposition = "auto",
+    marker = list(color = unname(cores_resposta[as.character(dados_pct$resposta_normalizada)])),
     hovertemplate = paste0(
       "%{x}<br>",
       "Quantidade: %{y}<br>",
@@ -107,7 +134,11 @@ renderizar_grafico_percentual <- function(df, pergunta_id_local, bloco_local) {
       "<extra></extra>"
     )
   ) |> layout(
-    xaxis = list(title = "Resposta"),
+    xaxis = list(
+      title = "Resposta",
+      categoryorder = "array",
+      categoryarray = ordem_niveis
+    ),
     yaxis = list(title = "Quantidade")
   )
 }

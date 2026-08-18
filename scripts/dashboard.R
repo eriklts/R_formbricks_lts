@@ -32,9 +32,6 @@ ui <- fluidPage(
   hr(),
   h3("Média por setor"),
   plotlyOutput("grafico_media"),
-  hr(),
-  h3("Últimas respostas"),
-  tableOutput("tabela"),
   hr(), hr(),
   h3("Análise por bloco e pergunta"),
   
@@ -48,38 +45,31 @@ ui <- fluidPage(
   textOutput("ultima_atualizacao")
 )
 
-# ===== SERVER - Lógica da aplicação =====
 server <- function(input, output, session) {
   
-  # ===== CACHES E VARIÁVEIS REATIVAS =====
   cache_dados <- reactiveVal(data.frame())
   cache_mapa_perguntas <- reactiveVal(data.frame())
   cache_survey_nomes <- reactiveVal(data.frame())
   ultima_busca <- reactiveVal(as.POSIXct("1970-01-01 00:00:00", tz = "UTC"))
   
-  # ===== ATUALIZAÇÃO INCREMENTAL DE DADOS =====
   observe({
     invalidateLater(CONFIG_UI$intervalo_atualizacao, session)
     
     tryCatch({
       momento_ultima_busca <- isolate(ultima_busca())
       
-      # Busca dados novos
       novos <- buscar_respostas_incrementais(con = con, ultima_atualizacao = momento_ultima_busca)
       surveys_db <- buscar_blocos_pesquisas(con)
       
-      # Monta mapa de perguntas
       novo_mapa <- montar_mapa_perguntas(surveys_db)
       cache_mapa_perguntas(novo_mapa)
       cache_survey_nomes(surveys_db)
       
       if (nrow(novos) == 0) return(invisible(NULL))
       
-      # Processa setores e respostas
       novos$setor <- vapply(novos$meta_url, extrair_setor_url, character(1), USE.NAMES = FALSE)
       novos$respostas <- lapply(novos$data, extrair_respostas)
       
-      # Atualiza cache de dados
       atual <- isolate(cache_dados())
       atual <- atualizar_dados_incrementais(atual, novos)
       atual <- atual |> arrange(created_at)
@@ -92,10 +82,8 @@ server <- function(input, output, session) {
     })
   })
   
-  # ===== REATIVAS PRINCIPAIS =====
   dados_tratados <- reactive({ cache_dados() })
   
-  # Dados filtrados apenas por survey (sem filtro de setor)
   dados_por_survey <- reactive({
     df <- dados_tratados()
     if (nrow(df) == 0) return(df)
@@ -122,7 +110,6 @@ server <- function(input, output, session) {
     df |> filter(!is.na(resposta_normalizada)) |> mutate(resposta = resposta_normalizada)
   })
   
-  # ===== ATUALIZAÇÃO DE FILTROS =====
   observeEvent(dados_por_survey(), {
     raw_setores <- if (nrow(dados_por_survey()) == 0) character(0) else sort(unique(as.character(dados_por_survey()$setor)))
     selecionado <- isolate(input$filtro_setor)
@@ -135,7 +122,6 @@ server <- function(input, output, session) {
     atualizar_filtro_survey(session, surveys, selecionado)
   })
   
-  # Resetar setores quando survey muda
   observeEvent(input$filtro_survey, {
     updateSelectizeInput(session, "filtro_setor", selected = character(0))
   })
@@ -160,7 +146,6 @@ server <- function(input, output, session) {
     atualizar_filtro_pergunta(session, perguntas, selecionado)
   })
   
-  # ===== OUTPUTS - TEXTOS E MÉTRICAS =====
   output$pesquisa_selecionada <- renderText({
     surveys <- cache_survey_nomes()
     selecionado <- input$filtro_survey
@@ -191,20 +176,11 @@ server <- function(input, output, session) {
     calcular_media_geral(respostas_quantitativas())
   })
   
-  # ===== OUTPUTS - GRÁFICOS =====
   output$grafico_setor <- renderPlotly({ renderizar_grafico_setor(dados_filtrados()) })
   output$grafico_respostas <- renderPlotly({ renderizar_grafico_respostas(respostas_quantitativas()) })
   output$grafico_tempo <- renderPlotly({ renderizar_grafico_tempo(dados_filtrados()) })
   output$grafico_media <- renderPlotly({ renderizar_grafico_media(respostas_quantitativas()) })
   
-  # ===== OUTPUT - TABELA =====
-  output$tabela <- renderTable({
-    df <- dados_filtrados()
-    if (nrow(df) == 0) return(data.frame())
-    df |> select(id, created_at, setor, finished) |> head(20)
-  })
-  
-  # ===== OUTPUTS - BLOCOS E PERGUNTAS =====
   perguntas_visiveis <- reactive({
     df <- respostas_estruturadas()
     if (nrow(df) == 0) return(data.frame())
@@ -238,7 +214,6 @@ server <- function(input, output, session) {
     }))
   })
   
-  # ===== PLOTS DINÂMICOS - GRÁFICOS POR PERGUNTA =====
   observe({
     perguntas <- perguntas_visiveis()
     if (nrow(perguntas) == 0) return()
@@ -256,11 +231,9 @@ server <- function(input, output, session) {
     }
   })
   
-  # ===== OUTPUT - TIMESTAMP =====
   output$ultima_atualizacao <- renderText({
     paste("Última atualização:", format(Sys.time(), "%d/%m/%Y %H:%M:%S"))
   })
 }
 
-# Criar e executar app
 app <- shinyApp(ui, server)

@@ -5,19 +5,14 @@ limpar_texto <- function(texto, tipo = "padrao") {
   
   s <- as.character(texto)
   
-  # Remove underscores e substitui por espaço
   s <- gsub("_", " ", s)
   
-  # Remove caracteres especiais
   s <- gsub("[^\\p{L}0-9 ]+", "", s, perl = TRUE)
   
-  # Remove espaços múltiplos
   s <- trimws(gsub("\\s+", " ", s))
   
-  # Padroniza com primeira letra maiúscula
   s <- tools::toTitleCase(tolower(s))
   
-  # Se ficou vazio, retorna string padrão
   if (nchar(s) == 0) return("Sem definição")
   s
 }

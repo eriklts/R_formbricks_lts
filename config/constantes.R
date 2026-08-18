@@ -24,6 +24,15 @@ normalizar_resposta <- c(
 # Padrão para validação de nomes genéricos
 PADRAO_BLOCO_GENERICO <- "^(Block|Bloco)\\s*[0-9]+$"
 
+# Cores por nível de resposta
+cores_resposta <- c(
+  "Discordo totalmente" = "#D32F2F",
+  "Discordo"            = "#FF8C00",
+  "Neutro"              = "#FDD835",
+  "Concordo"            = "#43A047",
+  "Concordo totalmente" = "#1B5E20"
+)
+
 # Configurações de UI
 CONFIG_UI <- list(
   titulo = "Dashboard - Pesquisa de Clima Organizacional",
