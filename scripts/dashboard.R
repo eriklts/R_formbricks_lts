@@ -20,18 +20,14 @@ ui <- fluidPage(
     column(4, wellPanel(h3("Média geral"), h2(textOutput("media_geral"))))
   ),
 
-  hr(),
-  h3("Respostas por setor"),
-  plotlyOutput("grafico_setor"),
+  uiOutput("painel_grafico_setor"),
   hr(),
   h3("Distribuição das respostas"),
   plotlyOutput("grafico_respostas"),
   hr(),
   h3("Respostas ao longo do tempo"),
   plotlyOutput("grafico_tempo"),
-  hr(),
-  h3("Média por setor"),
-  plotlyOutput("grafico_media"),
+  uiOutput("painel_grafico_media"),
   hr(), hr(),
   h3("Análise por bloco e pergunta"),
   
@@ -176,10 +172,36 @@ server <- function(input, output, session) {
     calcular_media_geral(respostas_quantitativas())
   })
   
+  # Gráficos condicionais: exibidos apenas quando 0 ou >= 2 setores estão selecionados
+  multiplos_setores <- reactive({
+    s <- input$filtro_setor
+    is.null(s) || length(s) == 0 || length(s) >= 2
+  })
+
+  output$painel_grafico_setor <- renderUI({
+    if (!multiplos_setores()) return(NULL)
+    tagList(
+      hr(),
+      h3("Respostas por setor"),
+      plotlyOutput("grafico_setor")
+    )
+  })
+
   output$grafico_setor <- renderPlotly({ renderizar_grafico_setor(dados_filtrados()) })
+
+  output$painel_grafico_media <- renderUI({
+    if (!multiplos_setores()) return(NULL)
+    tagList(
+      hr(),
+      h3("Média por setor"),
+      plotlyOutput("grafico_media")
+    )
+  })
+
+  output$grafico_media <- renderPlotly({ renderizar_grafico_media(respostas_quantitativas()) })
+
   output$grafico_respostas <- renderPlotly({ renderizar_grafico_respostas(respostas_quantitativas()) })
   output$grafico_tempo <- renderPlotly({ renderizar_grafico_tempo(dados_filtrados()) })
-  output$grafico_media <- renderPlotly({ renderizar_grafico_media(respostas_quantitativas()) })
   
   perguntas_visiveis <- reactive({
     df <- respostas_estruturadas()

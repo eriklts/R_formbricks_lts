@@ -1,24 +1,29 @@
 # Constantes e mapeamentos globais
 
 valor_resposta <- c(
-  "Discordo totalmente" = 1,
-  "Discordo" = 2,
-  "Neutro" = 3,
-  "Concordo" = 4,
-  "Concordo totalmente" = 5
+  "Discordo totalmente" = 2,
+  "Discordo" = 4,
+  "Neutro" = 6,
+  "Concordo" = 8,
+  "Concordo totalmente" = 10
 )
 
 normalizar_resposta <- c(
   "Discordo totalmente" = "Discordo totalmente",
   "Estoy totalmente en desacuerdo" = "Discordo totalmente",
+  "Je suis tout à fait en désaccord" = "Discordo totalmente",
   "Discordo" = "Discordo",
   "Estoy en desacuerdo" = "Discordo",
+  "Je ne suis pas d'accord" = "Discordo",
   "Neutro" = "Neutro",
   "Neutral" = "Neutro",
+  "Neutre" = "Neutro",
   "Concordo" = "Concordo",
   "Estoy de acuerdo" = "Concordo",
+  "Je suis d'accord" = "Concordo",
   "Concordo totalmente" = "Concordo totalmente",
-  "Estoy totalmente de acuerdo" = "Concordo totalmente"
+  "Estoy totalmente de acuerdo" = "Concordo totalmente",
+  "Je suis tout à fait d'accord" = "Concordo totalmente"
 )
 
 # Padrão para validação de nomes genéricos

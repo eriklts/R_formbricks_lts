@@ -74,7 +74,7 @@ renderizar_grafico_media <- function(df) {
   dados <- df |>
     mutate(valor = unname(valor_resposta[resposta])) |>
     group_by(setor) |>
-    summarise(media = mean(valor, na.rm = TRUE), .groups = "drop") |>
+    summarise(media = round(mean(valor, na.rm = TRUE), 2), .groups = "drop") |>
     arrange(desc(media))
   
   plot_ly(data = dados, x = ~setor, y = ~media, type = "bar") |>

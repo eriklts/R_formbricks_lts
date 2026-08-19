@@ -92,5 +92,5 @@ calcular_media_geral <- function(df_respostas_quantitativas) {
   if (nrow(df_respostas_quantitativas) == 0) return("-")
   
   valores <- unname(valor_resposta[df_respostas_quantitativas$resposta])
-  paste0(round(mean(valores, na.rm = TRUE), 2), " / 5")
+  paste0(round(mean(valores, na.rm = TRUE), 2), " / 10")
 }
