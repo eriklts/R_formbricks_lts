@@ -109,6 +109,9 @@ montar_mapa_blocos_json <- function(blocks_json, survey_id) {
       bloco_hash <- if (!is.null(bloco$id)) as.character(bloco$id) else NA_character_
       tipo_pergunta <- if (!is.null(elemento$type)) as.character(elemento$type) else NA_character_
 
+      # Ignorar perguntas descritivas/abertas (openText)
+      if (!is.na(tipo_pergunta) && tipo_pergunta == "openText") next
+
       resultado[[indice]] <- data.frame(
         survey_id = as.character(survey_id),
         bloco_numero = bloco_numero,

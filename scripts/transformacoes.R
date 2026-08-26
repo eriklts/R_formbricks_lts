@@ -19,7 +19,7 @@ limpar_texto <- function(texto, tipo = "padrao") {
 
 limpar_setor <- function(setor) {
   s <- limpar_texto(setor)
-  if (s == "Sem definição") return("Sem setor")
+  if (s == "Sem definição") return("HRO")
   s
 }
 
@@ -50,14 +50,14 @@ normalizar_e_valorizar_resposta <- function(resposta_limpa) {
 }
 
 extrair_setor_url <- function(url) {
-  if (is.na(url) || url == "") return("Sem setor")
+  if (is.na(url) || url == "") return("HRO")
   
   m <- regmatches(
     url,
     regexpr("(?<=[?&]setor=)[^&]+", url, perl = TRUE)
   )
   
-  if (length(m) == 0) return("Sem setor")
+  if (length(m) == 0) return("HRO")
   
   m <- gsub("\\+", " ", m)
   setor_limpo <- utils::URLdecode(m)

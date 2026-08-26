@@ -80,7 +80,20 @@ renderizar_grafico_media <- function(df) {
   plot_ly(data = dados, x = ~setor, y = ~media, type = "bar") |>
     layout(
       xaxis = list(title = "Setor"),
-      yaxis = list(title = "Média de respostas")
+      yaxis = list(title = "Média de respostas", range = c(0, 10)),
+      annotations = list(
+        list(
+          text = "\u2191",
+          x = 1,
+          y = 1,
+          xref = "paper",
+          yref = "paper",
+          xanchor = "right",
+          yanchor = "top",
+          showarrow = FALSE,
+          font = list(size = 28, color = "#333333")
+        )
+      )
     )
 }
 
