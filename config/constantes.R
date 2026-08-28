@@ -1,10 +1,10 @@
 # Constantes e mapeamentos globais
 
 valor_resposta <- c(
-  "Discordo totalmente" = 2,
-  "Discordo" = 4,
-  "Neutro" = 6,
-  "Concordo" = 8,
+  "Discordo totalmente" = 0,
+  "Discordo" = 2.5,
+  "Neutro" = 5.0,
+  "Concordo" = 7.5,
   "Concordo totalmente" = 10
 )
 
