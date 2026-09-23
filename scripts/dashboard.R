@@ -10,8 +10,10 @@ ui <- fluidPage(
   fluidRow(
     #column(6, selectizeInput("filtro_setor", "Filtrar por setor (deixe vazio para ver todos):", choices = character(0), selected = character(0), multiple = TRUE)),
     column(6, selectInput("filtro_survey", "Selecione a pesquisa:", choices = character(0))),
-    
+    column(6, div(style = "margin-top: 25px;",
+      checkboxInput("filtro_finished", "Exibir apenas respostas finalizadas", value = FALSE)
     ))
+  ),
 
   fluidRow(column(12, h4(textOutput("pesquisa_selecionada")))),
 
