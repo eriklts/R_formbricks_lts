@@ -8,15 +8,16 @@ ui <- fluidPage(
   titlePanel(CONFIG_UI$titulo),
 
   fluidRow(
-    column(6, selectizeInput("filtro_setor", "Filtrar por setor (deixe vazio para ver todos):", choices = character(0), selected = character(0), multiple = TRUE)),
-    column(6, selectInput("filtro_survey", "Selecione a pesquisa:", choices = character(0)))
-  ),
+    #column(6, selectizeInput("filtro_setor", "Filtrar por setor (deixe vazio para ver todos):", choices = character(0), selected = character(0), multiple = TRUE)),
+    column(6, selectInput("filtro_survey", "Selecione a pesquisa:", choices = character(0))),
+    
+    ))
 
   fluidRow(column(12, h4(textOutput("pesquisa_selecionada")))),
 
   fluidRow(
     column(4, wellPanel(h3("Total de respostas"), h2(textOutput("total_respostas")))),
-    column(4, wellPanel(h3("Setores"), h2(textOutput("total_setores")))),
+    #column(4, wellPanel(h3("Setores"), h2(textOutput("total_setores")))),
     column(4, wellPanel(h3("Média geral"), h2(textOutput("media_geral"))))
   ),
 
@@ -78,7 +79,14 @@ server <- function(input, output, session) {
     })
   })
   
-  dados_tratados <- reactive({ cache_dados() })
+  dados_tratados <- reactive({
+    df <- cache_dados()
+    if (nrow(df) == 0) return(df)
+    if (isTRUE(input$filtro_finished)) {
+      df <- df |> filter(finished == TRUE)
+    }
+    df
+  })
   
   dados_por_survey <- reactive({
     df <- dados_tratados()
@@ -173,32 +181,32 @@ server <- function(input, output, session) {
   })
   
   # Gráficos condicionais: exibidos apenas quando 0 ou >= 2 setores estão selecionados
-  multiplos_setores <- reactive({
-    s <- input$filtro_setor
-    is.null(s) || length(s) == 0 || length(s) >= 2
-  })
+  #multiplos_setores <- reactive({
+   # s <- input$filtro_setor
+    #is.null(s) || length(s) == 0 || length(s) >= 2
+  #})
 
-  output$painel_grafico_setor <- renderUI({
-    if (!multiplos_setores()) return(NULL)
-    tagList(
-      hr(),
-      h3("Respostas por setor"),
-      plotlyOutput("grafico_setor")
-    )
-  })
+  #output$painel_grafico_setor <- renderUI({
+    #if (!multiplos_setores()) return(NULL)
+    #tagList(
+      #hr(),
+      #h3("Respostas por setor"),
+      #plotlyOutput("grafico_setor")
+    #)
+  #})
 
-  output$grafico_setor <- renderPlotly({ renderizar_grafico_setor(dados_filtrados()) })
+  #output$grafico_setor <- renderPlotly({ renderizar_grafico_setor(dados_filtrados()) })
 
-  output$painel_grafico_media <- renderUI({
-    if (!multiplos_setores()) return(NULL)
-    tagList(
-      hr(),
-      h3("Média por setor"),
-      plotlyOutput("grafico_media")
-    )
-  })
+  #output$painel_grafico_media <- renderUI({
+    #if (!multiplos_setores()) return(NULL)
+    #tagList(
+      #hr(),
+      #h3("Média por setor"),
+      #plotlyOutput("grafico_media")
+    #)
+  #})
 
-  output$grafico_media <- renderPlotly({ renderizar_grafico_media(respostas_quantitativas()) })
+  #output$grafico_media <- renderPlotly({ renderizar_grafico_media(respostas_quantitativas()) })
 
   output$grafico_respostas <- renderPlotly({ renderizar_grafico_respostas(respostas_quantitativas()) })
   output$grafico_tempo <- renderPlotly({ renderizar_grafico_tempo(dados_filtrados()) })
