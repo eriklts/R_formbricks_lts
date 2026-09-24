@@ -11,7 +11,8 @@ ui <- fluidPage(
     #column(6, selectizeInput("filtro_setor", "Filtrar por setor (deixe vazio para ver todos):", choices = character(0), selected = character(0), multiple = TRUE)),
     column(6, selectInput("filtro_survey", "Selecione a pesquisa:", choices = character(0))),
     column(6, div(style = "margin-top: 25px;",
-      checkboxInput("filtro_finished", "Exibir apenas respostas finalizadas", value = FALSE)
+      checkboxInput("filtro_finished", "Exibir apenas respostas finalizadas", value = FALSE),
+      checkboxInput("filtro_notFinished", "Exibir apenas respostas NÃO finalizadas", value = FALSE)
     ))
   ),
 
@@ -82,14 +83,17 @@ server <- function(input, output, session) {
   })
   
   dados_tratados <- reactive({
-    df <- cache_dados()
-    if (nrow(df) == 0) return(df)
-    if (isTRUE(input$filtro_finished)) {
-      df <- df |> filter(finished == TRUE)
-    }
-    df
-  })
-  
+  df <- cache_dados()
+  if (nrow(df) == 0) return(df)
+
+  if (isTRUE(input$filtro_finished) && !isTRUE(input$filtro_notFinished)) {
+    df <- df |> filter(finished == TRUE)
+  } else if (isTRUE(input$filtro_notFinished) && !isTRUE(input$filtro_finished)) {
+    df <- df |> filter(finished == FALSE)
+  }
+  df
+})
+
   dados_por_survey <- reactive({
     df <- dados_tratados()
     if (nrow(df) == 0) return(df)
