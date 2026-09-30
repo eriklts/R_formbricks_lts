@@ -41,6 +41,9 @@ ui <- fluidPage(
   ),
   
   uiOutput("blocos_perguntas_ui"),
+  hr(), hr(),
+  h3("Respostas descritivas"),
+  uiOutput("descritivas_ui"),
   hr(),
   textOutput("ultima_atualizacao")
 )
@@ -49,6 +52,7 @@ server <- function(input, output, session) {
   
   cache_dados <- reactiveVal(data.frame())
   cache_mapa_perguntas <- reactiveVal(data.frame())
+  cache_mapa_descritivas <- reactiveVal(data.frame())
   cache_survey_nomes <- reactiveVal(data.frame())
   ultima_busca <- reactiveVal(as.POSIXct("1970-01-01 00:00:00", tz = "UTC"))
   
@@ -63,6 +67,7 @@ server <- function(input, output, session) {
       
       novo_mapa <- montar_mapa_perguntas(surveys_db)
       cache_mapa_perguntas(novo_mapa)
+      cache_mapa_descritivas(montar_mapa_perguntas_descritivas(surveys_db))
       cache_survey_nomes(surveys_db)
       
       if (nrow(novos) == 0) return(invisible(NULL))
@@ -176,11 +181,11 @@ server <- function(input, output, session) {
   
   output$total_respostas <- renderText({ nrow(dados_filtrados()) })
   
-  output$total_setores <- renderText({
-    df <- dados_filtrados()
-    if (nrow(df) == 0) return("0")
-    length(unique(df$setor))
-  })
+  #output$total_setores <- renderText({
+  #  df <- dados_filtrados()
+  #  if (nrow(df) == 0) return("0")
+  #  length(unique(df$setor))
+  #})
   
   output$media_geral <- renderText({
     calcular_media_geral(respostas_quantitativas())
@@ -238,16 +243,31 @@ server <- function(input, output, session) {
       return(p("Nenhuma pergunta encontrada."))
     }
     
-    tagList(lapply(seq_len(nrow(perguntas)), function(i) {
-      pergunta_id <- perguntas$pergunta_id[i]
-      pergunta_texto <- perguntas$pergunta[i]
-      
-      tagList(
-        h4(paste0(perguntas$pergunta_numero[i], ". ", pergunta_texto)),
-        plotlyOutput(paste0("pct_plot_", pergunta_id), height = CONFIG_UI$altura_grafico),
-        hr()
-      )
-    }))
+    total_bloco <- respostas_estruturadas() |>
+      dplyr::filter(bloco == input$filtro_bloco, !is.na(resposta_normalizada)) |>
+      dplyr::distinct(id) |>
+      nrow()
+
+    tagList(
+      div(
+        style = "margin-bottom: 16px;",
+        tags$span(
+          style = "font-size: 14px; color: #555; font-weight: 500;",
+          paste0("Total de respostas neste bloco: "),
+          tags$strong(total_bloco)
+        )
+      ),
+      lapply(seq_len(nrow(perguntas)), function(i) {
+        pergunta_id <- perguntas$pergunta_id[i]
+        pergunta_texto <- perguntas$pergunta[i]
+
+        tagList(
+          h4(paste0(perguntas$pergunta_numero[i], ". ", pergunta_texto)),
+          plotlyOutput(paste0("pct_plot_", pergunta_id), height = CONFIG_UI$altura_grafico),
+          hr()
+        )
+      })
+    )
   })
   
   observe({
@@ -266,10 +286,124 @@ server <- function(input, output, session) {
       })
     }
   })
-  
-  output$ultima_atualizacao <- renderText({
-    paste("Última atualização:", format(Sys.time(), "%d/%m/%Y %H:%M:%S"))
+
+  # ===== Respostas descritivas =====
+
+  respostas_descritivas <- reactive({
+    estruturar_respostas_descritivas(dados_filtrados(), cache_mapa_descritivas())
   })
+
+  output$descritivas_ui <- renderUI({
+    df <- respostas_descritivas()
+
+    if (nrow(df) == 0) {
+      return(p(
+        style = "color: #888; font-style: italic;",
+        "Nenhuma resposta descritiva disponível."
+      ))
+    }
+
+    # Agrupa perguntas preservando a ordem original (bloco → pergunta)
+    # bloco_numero é a posição física no JSON; reindexamos sequencialmente em R
+    perguntas_desc <- df |>
+      dplyr::distinct(bloco_numero, pergunta_numero, bloco, pergunta_id, pergunta, subheader) |>
+      dplyr::arrange(bloco_numero, pergunta_numero)
+
+    # Offset: quantidade de blocos únicos já exibidos na seção de múltipla escolha
+    n_blocos_mc <- respostas_estruturadas() |>
+      dplyr::filter(!is.na(bloco), bloco != "") |>
+      dplyr::distinct(bloco_numero) |>
+      nrow()
+
+    # Índice sequencial por bloco continuando após os blocos de múltipla escolha
+    blocos_ordem <- perguntas_desc |>
+      dplyr::distinct(bloco_numero, bloco) |>
+      dplyr::arrange(bloco_numero) |>
+      dplyr::mutate(bloco_seq = seq_len(dplyr::n()) + n_blocos_mc)
+
+    perguntas_desc <- perguntas_desc |>
+      dplyr::left_join(blocos_ordem, by = c("bloco_numero", "bloco"))
+
+    tagList(lapply(seq_len(nrow(perguntas_desc)), function(i) {
+      pid    <- perguntas_desc$pergunta_id[i]
+      ptexto <- perguntas_desc$pergunta[i]
+      pnum   <- perguntas_desc$pergunta_numero[i]
+      bloco  <- perguntas_desc$bloco[i]
+      bseq   <- perguntas_desc$bloco_seq[i]
+      psub   <- perguntas_desc$subheader[i]
+
+      respostas_pergunta <- df |>
+        dplyr::filter(pergunta_id == pid) |>
+        dplyr::pull(resposta)
+
+      itens <- lapply(seq_along(respostas_pergunta), function(j) {
+        tags$li(
+          style = paste(
+            "display: flex;",
+            "gap: 12px;",
+            "padding: 10px 14px;",
+            "margin-bottom: 6px;",
+            "background: #f8f9fa;",
+            "border-left: 3px solid #6c757d;",
+            "border-radius: 4px;",
+            "line-height: 1.5;"
+          ),
+          tags$span(
+            style = paste(
+              "min-width: 22px;",
+              "font-size: 12px;",
+              "font-weight: 600;",
+              "color: #6c757d;",
+              "padding-top: 1px;",
+              "flex-shrink: 0;"
+            ),
+            paste0(j, ".")
+          ),
+          tags$span(
+            style = "font-size: 14px; color: #333;",
+            respostas_pergunta[[j]]
+          )
+        )
+      })
+
+      tagList(
+        div(
+          style = "margin-top: 24px;",
+          tags$p(
+            style = "font-size: 12px; color: #888; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.05em;",
+            paste0(bseq, ". ", bloco)
+          ),
+          h4(
+            style = "margin-top: 0; margin-bottom: 4px; color: #333;",
+            paste0(pnum, ". ", ptexto)
+          ),
+          if (!is.na(psub) && nzchar(psub)) {
+            tags$p(
+              style = paste(
+                "font-size: 13px;",
+                "color: #666;",
+                "margin-top: 4px;",
+                "margin-bottom: 14px;",
+                "font-style: italic;"
+              ),
+              psub
+            )
+          } else {
+            div(style = "margin-bottom: 14px;")
+          },
+          tags$ul(
+            style = "list-style: none; padding-left: 0; margin: 0;",
+            tagList(itens)
+          )
+        ),
+        hr()
+      )
+    }))
+  })
+  
+  #output$ultima_atualizacao <- renderText({
+    #paste("Última atualização:", format(Sys.time(), "%d/%m/%Y %H:%M:%S"))
+  #})
 }
 
 app <- shinyApp(ui, server)

@@ -3,11 +3,9 @@ library(RPostgres)
 
 con <- dbConnect(
   RPostgres::Postgres(),
-  host = "localhost",
+  host = "179.124.146.8",
   port = 5432,
-  dbname = "dump_hro",
+  dbname = "formbricks",
   user = "postgres",
   password = "postgres"
 )
-
-dbListTables(con)

@@ -42,14 +42,18 @@ atualizar_filtro_survey <- function(session, surveys, selecionado_atual) {
 }
 
 atualizar_filtro_bloco <- function(session, blocos, selecionado_atual) {
-  if (is.null(selecionado_atual) || length(selecionado_atual) == 0 || !(selecionado_atual %in% blocos)) {
-    selecionado_atual <- blocos[1]
+  if (length(blocos) == 0) return(invisible(NULL))
+
+  valores <- unname(blocos)
+
+  if (is.null(selecionado_atual) || length(selecionado_atual) == 0 || !(selecionado_atual %in% valores)) {
+    selecionado_atual <- valores[1]
   }
-  
+
   updateSelectInput(
     session,
     "filtro_bloco",
-    choices = blocos,
+    choices  = blocos,
     selected = selecionado_atual
   )
 }
@@ -74,16 +78,20 @@ atualizar_filtro_pergunta <- function(session, perguntas, selecionado_atual) {
 }
 
 obter_blocos_unicos <- function(df) {
-  df |>
+  blocos <- df |>
     filter(
       !is.na(bloco),
       bloco != "",
       !grepl(PADRAO_BLOCO_GENERICO, bloco, ignore.case = TRUE)
     ) |>
     distinct(bloco_numero, bloco) |>
-    arrange(bloco_numero) |>
-    pull(bloco) |>
-    unique()
+    arrange(bloco_numero)
+
+  if (nrow(blocos) == 0) return(character(0))
+
+  # Numeração sequencial gerada em R, ignorando qualquer número que venha do banco
+  labels <- paste0(seq_len(nrow(blocos)), ". ", blocos$bloco)
+  setNames(blocos$bloco, labels)
 }
 
 obter_perguntas_bloco <- function(df, bloco_nome) {

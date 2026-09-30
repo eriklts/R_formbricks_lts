@@ -94,3 +94,42 @@ calcular_media_geral <- function(df_respostas_quantitativas) {
   valores <- unname(valor_resposta[df_respostas_quantitativas$resposta])
   paste0(round(mean(valores, na.rm = TRUE), 2), " / 10")
 }
+
+# ===== Respostas descritivas (openText) =====
+
+estruturar_respostas_descritivas <- function(df_filtrado, mapa_descritivas) {
+  if (nrow(df_filtrado) == 0 || nrow(mapa_descritivas) == 0) {
+    return(data.frame())
+  }
+
+  partes <- lapply(
+    seq_len(nrow(df_filtrado)),
+    function(i) {
+      vinculadas <- vincular_respostas_descritivas(
+        json_data      = df_filtrado$data[[i]],
+        survey_id      = df_filtrado$survey_id[[i]],
+        mapa_descritivas = mapa_descritivas
+      )
+
+      if (nrow(vinculadas) == 0) return(NULL)
+
+      vinculadas |>
+        mutate(
+          id         = df_filtrado$id[[i]],
+          created_at = df_filtrado$created_at[[i]],
+          setor      = df_filtrado$setor[[i]],
+          finished   = df_filtrado$finished[[i]]
+        ) |>
+        select(
+          id, survey_id, created_at, setor, finished,
+          bloco_numero, bloco, pergunta_numero, pergunta_id, pergunta, subheader, resposta
+        )
+    }
+  )
+
+  resultado <- bind_rows(partes)
+
+  if (nrow(resultado) == 0) return(data.frame())
+
+  resultado |> arrange(bloco_numero, pergunta_numero, created_at)
+}
