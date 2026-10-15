@@ -1,6 +1,0 @@
-install.packages("DBI")
-install.packages("RPostgres")
-install.packages("dplyr")
-install.packages("ggplot2")
-install.packages("shiny")
-install.packages("plotly")

@@ -1,0 +1,320 @@
+---
+title: ""
+output:
+  pdf_document:
+    latex_engine: xelatex
+    toc: false
+    number_sections: false
+    fig_width: 6.5
+    fig_height: 3.6
+    keep_tex: false
+geometry: "top=2.2cm, bottom=2.2cm, left=2.2cm, right=2.2cm"
+fontsize: 11pt
+params:
+  nome_pesquisa: "Todas as pesquisas"
+  total_respostas: 0
+  media_geral: "-"
+  nota_pesquisa: "-"
+  df_filtrado: NULL
+  df_respostas_quantitativas: NULL
+  df_respostas_estruturadas: NULL
+  df_respostas_descritivas: NULL
+  filtro_finished: FALSE
+  filtro_notFinished: FALSE
+  data_exportacao: ""
+header-includes:
+  - \usepackage{booktabs}
+  - \usepackage{float}
+  - \usepackage{xcolor}
+  - \usepackage{mdframed}
+  - \usepackage{fancyhdr}
+  - \usepackage{graphicx}
+  - \usepackage{caption}
+  - \usepackage{needspace}
+  - \definecolor{azul}{HTML}{1565C0}
+  - \definecolor{cinza}{HTML}{757575}
+  - \definecolor{fundo_bloco}{HTML}{EEF2FB}
+  - \definecolor{borda_bloco}{HTML}{1565C0}
+  - \pagestyle{fancy}
+  - \fancyhf{}
+  - \fancyhead[L]{\textcolor{azul}{\textbf{Pesquisa de Clima Organizacional}}}
+  - \fancyhead[R]{\textcolor{cinza}{\small Exportado em \theexportdate}}
+  - \fancyfoot[C]{\textcolor{cinza}{\small \thepage}}
+  - \renewcommand{\headrulewidth}{0.4pt}
+  - \renewcommand{\footrulewidth}{0pt}
+  - \captionsetup{labelformat=empty, font=small}
+  - \newcommand{\theexportdate}{}
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo    = FALSE,
+  warning = FALSE,
+  message = FALSE,
+  fig.pos = "H",
+  out.width = "100%"
+)
+
+library(ggplot2)
+library(dplyr)
+library(stringr)
+
+# Disponibiliza a data no cabeçalho LaTeX
+# (fancyhdr não aceita código R inline, então usamos um workaround via chunk)
+knitr::knit_hooks$set(document = function(x) {
+  x
+})
+
+# Escapa caracteres especiais LaTeX em texto livre (títulos, blocos, respostas)
+escapar_latex <- function(texto) {
+  stringr::str_replace_all(
+    texto,
+    c(
+      "\\\\" = "\\\\textbackslash{}",
+      "&"    = "\\\\&",
+      "%"    = "\\\\%",
+      "#"    = "\\\\#",
+      "_"    = "\\\\_",
+      "\\$"  = "\\\\$",
+      "\\^"  = "\\\\^{}",
+      "~"    = "\\\\textasciitilde{}",
+      "\\{"  = "\\\\{",
+      "\\}"  = "\\\\}"
+    )
+  )
+}
+```
+
+```{r definir_data, results='asis'}
+# Injeta a data como macro LaTeX para uso no cabeçalho
+cat(paste0("\\renewcommand{\\theexportdate}{", params$data_exportacao, "}\n"))
+```
+
+```{r filtro_texto}
+filtro_texto <- dplyr::case_when(
+  isTRUE(params$filtro_finished)    ~ "Apenas respostas finalizadas",
+  isTRUE(params$filtro_notFinished) ~ "Apenas respostas NÃO finalizadas",
+  TRUE                               ~ "Todas as respostas"
+)
+```
+
+<!-- ================================================================== -->
+<!--  PÁGINA INICIAL — Resumo + dashboards gerais                        -->
+<!-- ================================================================== -->
+
+\begin{center}
+{\LARGE \textbf{\textcolor{azul}{Relatório de Clima Organizacional}}}\\[6pt]
+{\large \textcolor{cinza}{`r params$nome_pesquisa`}}
+\end{center}
+
+\vspace{10pt}
+
+\begin{mdframed}[
+  linecolor=borda_bloco,
+  linewidth=1.2pt,
+  backgroundcolor=fundo_bloco,
+  innertopmargin=10pt,
+  innerbottommargin=10pt,
+  innerleftmargin=14pt,
+  innerrightmargin=14pt,
+  roundcorner=4pt
+]
+\begin{tabular}{ll}
+\textbf{Pesquisa:}           & `r params$nome_pesquisa` \\[4pt]
+\textbf{Total de respostas:} & `r params$total_respostas` \\[4pt]
+\textbf{Média geral:}        & `r params$media_geral` \quad \textbf{Nota da pesquisa:} \quad `r params$nota_pesquisa` \\[4pt]
+\textbf{Filtro aplicado:}    & `r filtro_texto` \\[4pt]
+\textbf{Data de exportação:} & `r params$data_exportacao` \\
+\end{tabular}
+\end{mdframed}
+
+\vspace{14pt}
+
+**Distribuição das respostas**
+
+```{r grafico_distribuicao, fig.height=3.4}
+ggplot_distribuicao_respostas(params$df_respostas_quantitativas)
+```
+
+\vspace{8pt}
+
+\needspace{10cm}
+**Respostas ao longo do tempo**
+
+```{r grafico_tempo, fig.height=3.2}
+ggplot_respostas_tempo(params$df_filtrado)
+```
+
+<!-- ================================================================== -->
+<!--  BLOCOS — cada um começa em nova página                             -->
+<!-- ================================================================== -->
+
+```{r blocos, results='asis', fig.height=3.4}
+df_est <- params$df_respostas_estruturadas
+
+if (is.null(df_est) || nrow(df_est) == 0) {
+
+  cat("\n\\newpage\n\n_Nenhuma resposta estruturada disponível._\n\n")
+
+} else {
+
+  blocos <- df_est |>
+    dplyr::filter(!is.na(bloco), bloco != "") |>
+    dplyr::distinct(bloco_numero, bloco) |>
+    dplyr::arrange(bloco_numero)
+
+  for (i in seq_len(nrow(blocos))) {
+    bloco_atual <- blocos$bloco[i]
+
+    # ---- Quebra de página obrigatória antes de cada bloco ----
+    cat("\n\\newpage\n\n")
+
+    # ---- Cabeçalho visual do bloco ----
+    total_bloco <- df_est |>
+      dplyr::filter(bloco == bloco_atual, !is.na(resposta_normalizada)) |>
+      dplyr::distinct(id) |>
+      nrow()
+
+    bloco_upper <- toupper(bloco_atual)
+
+    cat(paste0(
+      "\\begin{mdframed}[\n",
+      "  linecolor=borda_bloco,\n",
+      "  linewidth=1.5pt,\n",
+      "  backgroundcolor=fundo_bloco,\n",
+      "  innertopmargin=8pt,\n",
+      "  innerbottommargin=8pt,\n",
+      "  innerleftmargin=14pt,\n",
+      "  innerrightmargin=14pt,\n",
+      "  roundcorner=4pt\n",
+      "]\n",
+      "{\\Large \\textbf{\\textcolor{azul}{", bloco_upper, "}}}\n",
+      "\\hfill\n",
+      "{\\normalsize \\textcolor{cinza}{Total de respostas: \\textbf{", total_bloco, "}}}\n",
+      "\\end{mdframed}\n\n"
+    ))
+
+    # ---- Perguntas do bloco ----
+    perguntas_bloco <- df_est |>
+      dplyr::filter(bloco == bloco_atual) |>
+      dplyr::distinct(pergunta_numero, pergunta_id, pergunta) |>
+      dplyr::arrange(pergunta_numero)
+
+    for (j in seq_len(nrow(perguntas_bloco))) {
+      pid    <- perguntas_bloco$pergunta_id[j]
+      ptexto <- perguntas_bloco$pergunta[j]
+      pnum   <- perguntas_bloco$pergunta_numero[j]
+
+      p <- ggplot_percentual_pergunta(df_est, pid, bloco_atual)
+      if (is.null(p)) next
+
+      # Título da pergunta acima do gráfico
+      # \needspace garante que título e gráfico não sejam separados por quebra de página
+      titulo_escapado <- escapar_latex(ptexto)
+
+      cat(paste0(
+        "\n\\needspace{7cm}\n",
+        "\\vspace{6pt}\n",
+        "\\begingroup\\normalsize\\textbf{", pnum, ". ", titulo_escapado, "}\\endgroup\n\n"
+      ))
+
+      # Renderiza o gráfico
+      print(p)
+
+      cat("\n\\vspace{4pt}\n\n")
+    }
+  }
+}
+```
+
+<!-- ================================================================== -->
+<!--  RESPOSTAS DESCRITIVAS — nova página, numeração contínua            -->
+<!-- ================================================================== -->
+
+```{r descritivas, results='asis'}
+df_desc <- params$df_respostas_descritivas
+
+cat("\n\\newpage\n\n")
+
+# Cabeçalho da seção descritiva
+cat(paste0(
+  "\\begin{mdframed}[\n",
+  "  linecolor=borda_bloco,\n",
+  "  linewidth=1.5pt,\n",
+  "  backgroundcolor=fundo_bloco,\n",
+  "  innertopmargin=8pt,\n",
+  "  innerbottommargin=8pt,\n",
+  "  innerleftmargin=14pt,\n",
+  "  innerrightmargin=14pt,\n",
+  "  roundcorner=4pt\n",
+  "]\n",
+  "{\\Large \\textbf{\\textcolor{azul}{RESPOSTAS DESCRITIVAS}}}\n",
+  "\\end{mdframed}\n\n"
+))
+
+if (is.null(df_desc) || nrow(df_desc) == 0) {
+  cat("\n\\textit{\\textcolor{cinza}{Nenhuma resposta descritiva disponível.}}\n\n")
+} else {
+
+  perguntas_desc <- df_desc |>
+    dplyr::distinct(bloco_numero, pergunta_numero, bloco, pergunta_id, pergunta) |>
+    dplyr::arrange(bloco_numero, pergunta_numero)
+
+  # Contador contínuo de respostas (não reinicia entre perguntas)
+  contador_global <- 1L
+
+  for (k in seq_len(nrow(perguntas_desc))) {
+    pid    <- perguntas_desc$pergunta_id[k]
+    ptexto <- perguntas_desc$pergunta[k]
+    pbloco <- perguntas_desc$bloco[k]
+
+    titulo_escapado <- escapar_latex(ptexto)
+
+    bloco_escapado <- escapar_latex(pbloco)
+
+    # Subtítulo: bloco + pergunta
+    cat(paste0(
+      "\n\\vspace{10pt}\n",
+      "\\begingroup\\small\\textcolor{cinza}{", bloco_escapado, "}\\endgroup\n\n",
+      "\\begingroup\\normalsize\\textbf{", titulo_escapado, "}\\endgroup\n\n",
+      "\\vspace{4pt}\n\n"
+    ))
+
+    respostas_q <- df_desc |>
+      dplyr::filter(pergunta_id == pid, !is.na(resposta), nzchar(trimws(resposta))) |>
+      dplyr::arrange(created_at) |>
+      dplyr::pull(resposta)
+
+    if (length(respostas_q) == 0) {
+      cat("\\textit{\\textcolor{cinza}{Nenhuma resposta.}}\n\n")
+    } else {
+      for (resp in respostas_q) {
+        # Escapa caracteres especiais LaTeX na resposta
+        resp_escapada <- escapar_latex(resp)
+
+        # Quebra de linha automática via parbox — evita que respostas longas
+        # ultrapassem a margem e garante espaçamento visual entre itens
+        cat(paste0(
+          "\\vspace{2pt}\n",
+          "\\noindent\\hangindent=1.6em\\hangafter=1 ",
+          "\\textbf{", contador_global, ".}~",
+          resp_escapada,
+          "\n\n"
+        ))
+
+        contador_global <- contador_global + 1L
+      }
+    }
+
+    # Separador leve entre perguntas descritivas
+    if (k < nrow(perguntas_desc)) {
+      cat("\\vspace{4pt}\\noindent\\rule{\\linewidth}{0.3pt}\\vspace{2pt}\n\n")
+    }
+  }
+}
+```
+
+\vspace{20pt}
+
+\begin{center}
+\end{center}

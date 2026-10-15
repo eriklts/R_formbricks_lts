@@ -7,6 +7,7 @@ source("scripts/vincular_respostas.R")
 source("scripts/reativos.R")
 source("scripts/filtros.R")
 source("scripts/graficos.R")
+source("scripts/exportar_pdf.R")
 source("scripts/dashboard.R")
 
 app

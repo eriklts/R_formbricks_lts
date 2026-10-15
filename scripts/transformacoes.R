@@ -1,6 +1,6 @@
 # Funções de transformação e limpeza de dados
 
-limpar_texto <- function(texto, tipo = "padrao") {
+limpar_texto <- function(texto) {
   if (is.null(texto) || !nzchar(as.character(texto))) return("")
   
   s <- as.character(texto)

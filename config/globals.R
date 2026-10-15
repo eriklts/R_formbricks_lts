@@ -8,7 +8,7 @@ utils::globalVariables(
     "survey_id", "quantidade", "media", "valor", "data",
     
     # Transformações
-    "ordem", "percentual", "texto", "tipo_pergunta",
+    "percentual", "texto", "tipo_pergunta",
     
     # Agregações
     "n",
@@ -17,7 +17,10 @@ utils::globalVariables(
     "con",
     
     # Constantes
-    "valor_resposta", "normalizar_resposta", "PADRAO_BLOCO_GENERICO", "CONFIG_UI"
+    "valor_resposta", "normalizar_resposta", "PADRAO_BLOCO_GENERICO", "CONFIG_UI",
+    "cores_resposta",
+
+    # Exportação PDF
+    "label", "data_dia", "bloco_seq"
   )
 )
-

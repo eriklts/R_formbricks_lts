@@ -95,6 +95,66 @@ calcular_media_geral <- function(df_respostas_quantitativas) {
   paste0(round(mean(valores, na.rm = TRUE), 2), " / 10")
 }
 
+# ---------------------------------------------------------------------------
+# calcular_nota_pesquisa — converte avaliação por estrelas (1–5) em nota 0–10
+# ---------------------------------------------------------------------------
+
+calcular_nota_pesquisa <- function(df_respostas_rating) {
+  # Conversão: nota = (média_estrelas - 1) / 4 * 10
+  # 1★ → 0.0  |  3★ → 5.0  |  5★ → 10.0
+  if (is.null(df_respostas_rating) || nrow(df_respostas_rating) == 0) return("-")
+
+  col <- if ("valor_rating" %in% names(df_respostas_rating)) "valor_rating" else "resposta"
+  valores <- suppressWarnings(as.numeric(df_respostas_rating[[col]]))
+  valores <- valores[!is.na(valores)]
+
+  if (length(valores) == 0) return("-")
+
+  nota <- round((mean(valores) - 1) / 4 * 10, 1)
+  paste0(nota, " / 10")
+}
+
+# ===== Respostas de avaliação (rating) =====
+
+estruturar_respostas_rating <- function(df_filtrado, mapa_rating) {
+  if (nrow(df_filtrado) == 0 || nrow(mapa_rating) == 0) {
+    return(data.frame())
+  }
+
+  partes <- lapply(
+    seq_len(nrow(df_filtrado)),
+    function(i) {
+      respostas_brutas <- extrair_respostas_por_hash(df_filtrado$data[[i]])
+      if (nrow(respostas_brutas) == 0) return(NULL)
+
+      survey_id_atual <- as.character(df_filtrado$survey_id[[i]])
+      mapa_survey <- mapa_rating |> dplyr::filter(.data$survey_id == survey_id_atual)
+      if (nrow(mapa_survey) == 0) return(NULL)
+
+      resultado <- respostas_brutas |>
+        dplyr::inner_join(mapa_survey, by = "pergunta_id") |>
+        dplyr::mutate(
+          valor_rating = suppressWarnings(as.numeric(resposta))
+        ) |>
+        dplyr::filter(!is.na(valor_rating))
+
+      if (nrow(resultado) == 0) return(NULL)
+
+      resultado |>
+        dplyr::mutate(
+          id         = df_filtrado$id[[i]],
+          created_at = df_filtrado$created_at[[i]],
+          setor      = df_filtrado$setor[[i]],
+          finished   = df_filtrado$finished[[i]]
+        )
+    }
+  )
+
+  resultado <- dplyr::bind_rows(partes)
+  if (nrow(resultado) == 0) return(data.frame())
+  resultado |> dplyr::arrange(created_at)
+}
+
 # ===== Respostas descritivas (openText) =====
 
 estruturar_respostas_descritivas <- function(df_filtrado, mapa_descritivas) {

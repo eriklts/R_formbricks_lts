@@ -1,0 +1,11 @@
+# Dependências Python para exportação Excel
+# Instalar com: pip3 install -r requirements.txt --break-system-packages
+#
+# Versões mínimas testadas no ambiente de desenvolvimento.
+# Use versões exatas em produção se necessário.
+
+psycopg2-binary>=2.9.9      # driver PostgreSQL
+pandas>=2.1.4               # manipulação de dados
+numpy>=1.26.4               # dependência do pandas
+xlsxwriter>=3.2.9           # geração de Excel com gráficos nativos
+openpyxl>=3.1.2             # leitura/escrita Excel (dependência transitiva)
