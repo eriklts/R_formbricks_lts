@@ -3,9 +3,9 @@ library(RPostgres)
 
 con <- dbConnect(
   RPostgres::Postgres(),
-  host = "179.124.146.8",
+  host = "localhost",
   port = 5432,
-  dbname = "formbricks",
+  dbname = "formbricks_20261020",
   user = "postgres",
   password = "postgres"
 )
