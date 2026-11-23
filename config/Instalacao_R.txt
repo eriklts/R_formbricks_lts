@@ -1,0 +1,254 @@
+ROTEIRO DE CONFIGURACAO E EXECUCAO
+Projeto: R_formbricks_lts
+Ambiente: Windows, somente terminal (PowerShell)
+
+Este roteiro prepara um computador sem ambiente R previamente configurado. A instalacao, configuracao e execucao devem ser feitas pelo terminal. Nao e necessario RStudio ou VS Code.
+
+==================================================
+1. INSTALAR R
+==================================================
+
+1. Abra o PowerShell.
+2. Instale o R com winget:
+
+winget install --id RProject.R -e
+
+3. Feche e reabra o PowerShell.
+4. Verifique:
+
+R --version
+Rscript --version
+
+Se os comandos nao forem reconhecidos, verifique a instalacao e o PATH do Windows antes de continuar.
+
+==================================================
+2. BAIXAR E EXTRAIR O PROJETO
+==================================================
+
+1. Baixe o ZIP do repositorio e extraia-o para uma pasta, por exemplo:
+
+C:\Projetos\R_formbricks_lts
+
+2. No PowerShell, entre na pasta raiz do projeto (a pasta onde esta app.R). Exemplo:
+
+cd C:\Projetos\R_formbricks_lts
+
+Confirme os arquivos:
+
+dir
+
+A raiz do projeto deve conter app.R, config, scripts, python e requirements.txt.
+
+==================================================
+3. INSTALAR OS PACOTES R
+==================================================
+
+Na raiz do projeto, execute:
+
+Rscript -e "install.packages(c('DBI','RPostgres','dplyr','ggplot2','shiny','plotly','rmarkdown','stringr','tinytex','jsonlite'), repos='https://cloud.r-project.org')"
+
+O comando instala os pacotes usados pelo projeto e jsonlite.
+
+==================================================
+4. INSTALAR O TINYTeX PARA EXPORTACAO PDF
+==================================================
+
+A exportacao PDF usa rmarkdown e TinyTeX (LaTeX).
+
+Execute:
+
+Rscript -e "tinytex::install_tinytex()"
+
+A instalacao pode demorar. Execute uma vez por computador. Se o instalador solicitar reiniciar o terminal, feche e abra o PowerShell novamente.
+
+==================================================
+5. INSTALAR POSTGRESQL
+==================================================
+
+Instale pelo winget:
+
+winget install --id PostgreSQL.PostgreSQL -e
+
+Siga as instrucoes do instalador no terminal, se apresentadas. O instalador do PostgreSQL para Windows pode abrir etapas interativas/GUI. Portanto, esta etapa pode nao ser completamente silenciosa ou exclusivamente textual em todas as versoes do instalador.
+
+Durante a instalacao:
+- Defina uma senha para o usuario postgres e guarde-a.
+- Mantenha a porta 5432, salvo se houver motivo para alteracao.
+- Instale os componentes de servidor e ferramentas de linha de comando.
+
+Verifique se o PostgreSQL esta instalado e em funcionamento. Se psql nao estiver no PATH, use o caminho completo para psql.exe, normalmente dentro da pasta bin da instalacao do PostgreSQL, ou ajuste o PATH do Windows.
+
+==================================================
+6. CRIAR E RESTAURAR O BANCO
+==================================================
+
+O projeto espera, na configuracao atual, um banco chamado:
+
+formbricks_20261020
+
+E a conexao atual usa host localhost, porta 5432, usuario postgres.
+
+A restauracao precisa de um arquivo de backup PostgreSQL (.dump). O ZIP do projeto nao inclui o dump.
+
+6.1. Criar o banco
+
+No PowerShell, execute (o psql pode exigir caminho completo):
+
+psql -U postgres -h localhost -p 5432
+
+Quando solicitado, digite a senha definida na instalacao.
+
+No prompt do psql, execute:
+
+CREATE DATABASE formbricks_20261020;
+
+Saia do psql:
+
+\q
+
+6.2. Restaurar o backup
+
+No PowerShell, execute pg_restore usando o arquivo .dump. Substitua o caminho pelo caminho real do backup:
+
+pg_restore -U postgres -h localhost -p 5432 -d formbricks_20261020 "C:\caminho\para\backup.dump"
+
+Digite a senha, se solicitada. Aguarde o comando terminar.
+
+Se pg_restore nao for reconhecido, use o caminho completo do executavel na pasta bin do PostgreSQL.
+
+==================================================
+7. AJUSTAR A CONEXAO DO PROJETO
+==================================================
+
+Abra o arquivo config/conexao.R usando um editor de texto simples (por exemplo, Notepad) ou altere-o por comando.
+
+A configuracao atual do arquivo e:
+
+host = "localhost"
+port = 5432
+dbname = "formbricks_20261020"
+user = "postgres"
+password = "postgres"
+
+A senha no arquivo e o valor atualmente definido no projeto. Ela nao e necessariamente a senha que voce definiu durante a instalacao do PostgreSQL.
+
+Se a senha instalada for diferente, atualize password no arquivo config/conexao.R para corresponder a senha do PostgreSQL. Se alterou o nome do banco ou a porta, ajuste os campos correspondentes tambem.
+
+==================================================
+8. INSTALAR PYTHON E DEPENDENCIAS
+==================================================
+
+O projeto inclui integracao Python para exportacao de Excel.
+
+8.1. Instalar Python
+
+Instale Python 3.12 ou 3.13, por exemplo:
+
+winget install --id Python.Python.3.13 -e
+
+Feche e reabra o PowerShell. Verifique:
+
+python --version
+py --version
+
+8.2. Criar e ativar ambiente virtual
+
+Na raiz do projeto:
+
+python -m venv .venv
+
+Ative:
+
+.venv\Scripts\Activate.ps1
+
+Se a politica do PowerShell impedir a ativacao, execute apenas nesta sessao:
+
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
+
+Depois:
+
+.venv\Scripts\Activate.ps1
+
+8.3. Instalar bibliotecas Python
+
+Com o ambiente virtual ativo, execute:
+
+python -m pip install --upgrade pip
+python -m pip install -r requirements.txt
+
+O requirements.txt do projeto instala psycopg2-binary, pandas, numpy, xlsxwriter e openpyxl.
+
+==================================================
+9. EXECUTAR O DASHBOARD PELO TERMINAL
+==================================================
+
+Certifique-se de estar na pasta raiz do projeto (onde esta app.R).
+
+Execute:
+
+Rscript -e "shiny::runApp('.', host='127.0.0.1', port=3838)"
+
+Quando o servidor iniciar, abra no navegador o endereco local informado pelo Shiny, normalmente:
+
+http://127.0.0.1:3838
+
+O navegador e usado apenas para acessar a interface do dashboard. A inicializacao e feita pelo terminal.
+
+Para encerrar, pressione CTRL+C no terminal.
+
+==================================================
+10. CHECKLIST
+==================================================
+
+[ ] R instalado e Rscript funciona no PowerShell
+[ ] Projeto extraido e terminal aberto na pasta raiz
+[ ] Pacotes R instalados
+[ ] TinyTeX instalado para exportacao PDF
+[ ] PostgreSQL instalado e servidor em execucao
+[ ] Banco formbricks_20261020 criado
+[ ] Backup .dump restaurado
+[ ] config/conexao.R ajustado para as credenciais corretas
+[ ] Python instalado
+[ ] Ambiente virtual .venv criado e ativado
+[ ] requirements.txt instalado
+[ ] Dashboard iniciou via Rscript no terminal
+
+==================================================
+11. ERROS COMUNS
+==================================================
+
+Rscript nao reconhecido:
+- Reabra o PowerShell apos instalar R.
+- Se persistir, confirme o PATH ou execute Rscript.exe pelo caminho completo.
+
+Erro de conexao ao PostgreSQL:
+- Confirme que o servico PostgreSQL esta ativo.
+- Confira host, porta, nome do banco, usuario e senha em config/conexao.R.
+- Verifique se o banco foi restaurado.
+
+Erro de pacote R:
+- Instale o pacote faltante com:
+  Rscript -e "install.packages('NOME_DO_PACOTE', repos='https://cloud.r-project.org')"
+
+Falha ao exportar PDF:
+- Confirme a instalacao de rmarkdown, stringr e tinytex.
+- Se necessario, execute:
+  Rscript -e "tinytex::install_tinytex()"
+
+Python nao reconhecido:
+- Reabra o terminal e confira PATH/instalacao.
+- Tente o comando py, caso esteja disponivel.
+
+Falha na exportacao Excel:
+- Confirme que o ambiente .venv esta ativo e que pip install -r requirements.txt terminou sem erros.
+- Confira tambem os parametros de conexao ao PostgreSQL usados pela rotina Python, se houver.
+
+==================================================
+OBSERVACOES
+==================================================
+
+- O roteiro considera Windows e PowerShell.
+- O projeto precisa de um backup PostgreSQL valido. O arquivo .dump nao esta incluido no ZIP do codigo.
+- A configuracao do banco em config/conexao.R precisa corresponder as credenciais configuradas no computador.
+- O roteiro foi elaborado a partir dos arquivos do repositorio, incluindo config/install.R, config/conexao.R, app.R e requirements.txt.
+- A instalacao do PostgreSQL pode exigir uma etapa interativa no instalador, mesmo que o restante seja feito por terminal.
