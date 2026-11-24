@@ -17,9 +17,9 @@ def get_connection_params() -> dict:
     Prioridade: variáveis de ambiente > valores padrão do projeto.
     """
     return {
-        "host":     os.environ.get("PG_HOST",     "179.124.146.8"),
+        "host":     os.environ.get("PG_HOST",     "localhost"),
         "port":     int(os.environ.get("PG_PORT", "5432")),
-        "dbname":   os.environ.get("PG_DBNAME",   "formbricks"),
+        "dbname":   os.environ.get("PG_DBNAME",   "formbricks_20261020"),
         "user":     os.environ.get("PG_USER",      "postgres"),
         "password": os.environ.get("PG_PASSWORD",  "postgres"),
     }

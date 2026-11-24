@@ -567,6 +567,25 @@ server <- function(input, output, session) {
       # do working directory do processo Shiny no momento da exportação.
       raiz_projeto  <- normalizePath(file.path(getwd()), mustWork = FALSE)
       script_python <- file.path(raiz_projeto, "python", "main.py")
+      if (!file.exists(script_python)) {
+        stop(paste("Script de exportação Excel não encontrado:", script_python))
+      }
+
+      python_venv <- if (.Platform$OS.type == "windows") {
+        file.path(raiz_projeto, ".venv", "Scripts", "python.exe")
+      } else {
+        file.path(raiz_projeto, ".venv", "bin", "python")
+      }
+      python_cmd <- if (file.exists(python_venv)) {
+        normalizePath(python_venv, winslash = "/", mustWork = TRUE)
+      } else {
+        candidatos <- Sys.which(c("python", "py", "python3"))
+        candidatos <- candidatos[nzchar(candidatos)]
+        if (length(candidatos) == 0) {
+          stop("Python não encontrado. Instale o Python ou crie o ambiente .venv do projeto.")
+        }
+        unname(candidatos[[1]])
+      }
 
       survey_id_arg <- if (is.null(selecionado) || !nzchar(selecionado)) "__TODAS__" else selecionado
 
@@ -587,9 +606,19 @@ server <- function(input, output, session) {
       }
 
       withProgress(message = "Gerando Excel, aguarde...", value = 0.3, {
+        db_env <- c(
+          PG_HOST = db_config$host,
+          PG_PORT = as.character(db_config$port),
+          PG_DBNAME = db_config$dbname,
+          PG_USER = db_config$user,
+          PG_PASSWORD = db_config$password
+        )
+        previous_db_env <- Sys.getenv(names(db_env), unset = NA_character_)
+
         resultado <- tryCatch({
+          do.call(Sys.setenv, as.list(db_env))
           system2(
-            command = "python3",
+            command = python_cmd,
             args    = shQuote(args),   # escapa espaços e caracteres especiais
             stdout  = TRUE,
             stderr  = TRUE,
@@ -597,6 +626,14 @@ server <- function(input, output, session) {
           )
         }, error = function(e) {
           stop(paste("Falha ao executar Python:", conditionMessage(e)))
+        }, finally = {
+          configuradas <- !is.na(previous_db_env)
+          if (any(configuradas)) {
+            do.call(Sys.setenv, as.list(previous_db_env[configuradas]))
+          }
+          if (any(!configuradas)) {
+            Sys.unsetenv(names(previous_db_env)[!configuradas])
+          }
         })
 
         incProgress(0.7)

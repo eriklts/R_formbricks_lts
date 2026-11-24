@@ -169,6 +169,10 @@ Depois:
 
 .venv\Scripts\Activate.ps1
 
+Ao exportar, o dashboard usa automaticamente o Python desse ambiente virtual
+quando ele existe e compartilha as credenciais de config/conexao.R com a rotina
+Python.
+
 8.3. Instalar bibliotecas Python
 
 Com o ambiente virtual ativo, execute:
@@ -241,7 +245,8 @@ Python nao reconhecido:
 
 Falha na exportacao Excel:
 - Confirme que o ambiente .venv esta ativo e que pip install -r requirements.txt terminou sem erros.
-- Confira tambem os parametros de conexao ao PostgreSQL usados pela rotina Python, se houver.
+- Confira os parametros de conexao ao PostgreSQL em config/conexao.R e confirme
+  que o banco local esta em execucao.
 
 ==================================================
 OBSERVACOES
